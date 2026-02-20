@@ -83,14 +83,17 @@ struct ContentView: View {
     }
     
     func timer() async {
-            while  !Task.isCancelled {
+            while  !isReminderShow && !Task.isCancelled {
                 do {
                     try await Task.sleep(nanoseconds: 5_000_000_000)
-                   
+                    
+                  
+                        
                         await MainActor.run {
-                           
+                            
                             isReminderShow = true
-             
+                            
+                            
                         
                     }
                 } catch {

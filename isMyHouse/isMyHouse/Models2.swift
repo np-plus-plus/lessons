@@ -159,7 +159,11 @@ class HouseStore: ObservableObject {
         }
     }
     
-    @Published var selectedHouse: House?
+    @Published var selectedHouse: House? = nil {
+        didSet {
+            save(selectedHouse, forKey: "selectedHouse")
+        }
+    }
     @Published var selectedRoom: Room?
     @Published var selectedCategory: Category?
     @Published var selectedObject: ObjectHouse?
@@ -250,7 +254,7 @@ class HouseStore: ObservableObject {
         if let loaded: [Room] = load([Room].self, forKey: "rooms") { self.rooms = loaded }
         if let loaded: [Category] = load([Category].self, forKey: "categories") { self.categories = loaded }
         if let loaded: [ObjectHouse] = load([ObjectHouse].self, forKey: "objectsHouse") { self.objectsHouse = loaded }
-        // if let loaded: House = load(selectedHouse.self, forKey: "selectedHouse") { self.selectedHouse = loaded }
+        if let loaded: House? = load(House?.self, forKey: "selectedHouse") { self.selectedHouse = loaded }
     }
 }
 

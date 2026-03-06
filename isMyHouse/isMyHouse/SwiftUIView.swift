@@ -5,6 +5,7 @@ struct SwiftUIView: View {
     @ObservedObject private var settings = SettingsHouse.shared
     @ObservedObject private var storeHouse = HouseStore.shared
     
+    
     var body: some View {
         VStack(spacing: 16) {
             Text("\(settings.selectedCalculatonMethod)")

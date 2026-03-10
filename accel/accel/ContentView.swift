@@ -45,6 +45,52 @@ func startAccelerometerStream() -> AsyncStream<CMAccelerometerData> {
     }
 }
 
+
+
+//private func analyzeMotion(accelerometerData: CMAccelerometerData, gyroData: CMGyroData?) {
+//    
+//
+//    
+//    let acceleration = accelerometerData.acceleration
+//    let rotationRate = gyroData?.rotationRate ?? CMRotationRate()
+//
+//    let walkingThreshold: Double = 0.5
+//    let runningThreshold: Double = 1.0
+//    let liftingThreshold: Double = 2.0
+//    
+//    if abs(acceleration.x) > liftingThreshold || abs(acceleration.y) > liftingThreshold {
+//        currentExercise = "Подъем тяжестей"
+//        repetitions += 1
+//        duration += 1
+//    } else if abs(acceleration.x) > runningThreshold {
+//        currentExercise = "Бег"
+//        duration += 1
+//    } else if abs(acceleration.x) > walkingThreshold {
+//        currentExercise = "Ходьба"
+//        duration += 1
+//    } else {
+//        currentExercise = "Отсутствует"
+//    }
+//
+//    print("Текущая активность: \(currentExercise)")
+//    print("Повторы: \(repetitions)")
+//    print("Время выполнения: \(duration) секунд")
+//}
+
+private func startGyroscopeUpdates() {
+    
+    let motionManager = CMMotionManager()
+    
+        if motionManager.isGyroAvailable {
+            motionManager.gyroUpdateInterval = 0.1
+            motionManager.startGyroUpdates(to: .main) { (data, error) in
+                if let data = data {
+                   // self.analyzeMotion(data: data)
+                }
+            }
+        }
+    }
+
 enum Activity {
         case sitting
         case walking
@@ -57,6 +103,11 @@ struct ActivityStore: Identifiable {
     var timelocal: Int
 }
 
+struct Log: Identifiable {
+    var id: UUID = UUID()
+    var value: Double
+}
+
 struct ContentView: View {
     @State private var acceleration: (x: Double, y: Double, z: Double) = (0, 0, 0)
     @State private var m: Double = 0
@@ -65,6 +116,8 @@ struct ContentView: View {
     @State private var storedActivities: [ActivityStore] = []
     @State private var task: Task<Void, Never>? = nil
     @State private var lastTick: Date? = nil
+    @State private var log: [Log] = []
+    @State private var LastY: Double = 0
 
     var body: some View {
         VStack() {
@@ -81,17 +134,19 @@ struct ContentView: View {
                 Text(isRunning ? "Stop" : "Start")
             }
             
-            List {
-                ForEach(storedActivities) { item in
-                    HStack {
-                        Text(activityDisplayName(item.name))
-                        Spacer()
-                        let minutes = item.timelocal / 60
-                        let seconds = item.timelocal % 60
-                        Text(String(format: "%02dm %02ds", minutes, seconds))
-                    }
-                }
-            }
+            Text("Количество повторений: \(sumLog(log: log))")
+            
+//            List {
+//                ForEach(log) { item in
+//                    HStack {
+//                        Text("\(item.value)")
+////                        Spacer()
+////                        let minutes = item.timelocal / 60
+////                        let seconds = item.timelocal % 60
+////                        Text(String(format: "%02dm %02ds", minutes, seconds))
+//                    }
+//                }
+//            }
             
             Spacer()
 
@@ -102,9 +157,17 @@ struct ContentView: View {
         }
         .padding()
     }
+    
+    func sumLog(log: [Log]) -> Int {
+        let total = log.reduce(0.0) { partial, item in
+            partial + item.value
+        }
+        return Int(total)
+    }
 
     func StartActivity() {
         if isRunning {
+            log.removeAll()
             lastTick = Date()
             task = Task { @MainActor in
                 var lastUpdate = Date()
@@ -113,16 +176,18 @@ struct ContentView: View {
                     acceleration = acc
 
                     let now = Date()
-                    if inferredActivity(from: acceleration) {
-                        let delta = Int(now.timeIntervalSince(lastUpdate))
-                        if delta > 0 {
-                            incrementTime(for: activity, by: delta)
-                            lastUpdate = now
-                        }
-                    }else {
-                        lastUpdate = now
-                    }
-                }
+                    //if inferredActivity(from: acceleration) {
+                    let delta = Int(now.timeIntervalSince(lastUpdate))
+                     //   if delta > 0 {
+                      //      incrementTime(for: activity, by: delta)
+                     //       lastUpdate = now
+                      //  }
+                   // }else {
+                       lastUpdate = now
+                    inferredActivity(from: acceleration)
+                    
+                   }
+                
             }
         } else {
             task?.cancel()
@@ -130,19 +195,32 @@ struct ContentView: View {
         }
     }
     
-    private func inferredActivity(from acc: (x: Double, y: Double, z: Double)) -> Bool {
-     
-        m = sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z)
-        switch m {
-        case 0.0...1.0:
-            return  activity == .sitting
-        case 1.0..<2.0:
-            return activity == .walking
-        case 2.0..<5.0:
-            return activity == .running
-        default:
-            return false
+    private func inferredActivity(from acc: (x: Double, y: Double, z: Double)) {
+        
+   
+        
+        if abs(LastY) - abs(acc.y) > 0.3 {
+            log.append(Log(value: 0.5))
+            LastY = acc.y
         }
+        
+        
+            
+    
+        
+        
+        
+//        m = sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z)
+//        switch m {
+//        case 0.0...1.0:
+//            return  activity == .sitting
+//        case 1.0..<2.0:
+//            return activity == .walking
+//        case 2.0..<5.0:
+//            return activity == .running
+//        default:
+//            return false
+//        }
     }
 
     private func incrementTime(for activity: Activity, by seconds: Int) {
@@ -166,3 +244,4 @@ struct ContentView: View {
 #Preview {
     ContentView()
 }
+
